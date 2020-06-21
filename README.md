@@ -118,7 +118,7 @@ Pattern p = Pattern.compile("^(a)+$");
 p.matcher("aaa").groupCount()
 ```
 
-However, the correct answer is 1. Had it not been for testing coverage, an edge case corresponding to the above mistake wouldn't have been tested. As a result, the issue could have propagated throug the code.
+However, the correct answer is 1. Had it not been for testing coverage, an edge case corresponding to the above mistake wouldn't have been tested. As a result, the issue could have propagated through the code.
 
 ## Design
 ## Implementation
