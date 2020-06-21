@@ -12,6 +12,12 @@ import java.util.Objects;
 import static io.sadeq.Configs.*;
 import static io.sadeq.utils.RegexPatterns.*;
 
+/**
+ * This class parses triples "n,w,p",
+ * and stores them as the three fields number, weight, and price.
+ * <p>
+ * It also computes efficiency = p/w.
+ */
 @Getter
 @Immutable
 public final class Item implements Serializable {
@@ -23,6 +29,16 @@ public final class Item implements Serializable {
 
     private final transient BigDecimal efficiency;
 
+    /**
+     * A simple constructor, which checks input ranges, and assigns
+     * the arguments directly to fields. It also computes efficiency.
+     *
+     * @param number Item's number n
+     * @param weight Item's weight w
+     * @param price  Item's price p
+     * @throws ItemException If any of the items are out of bounds.
+     * See {@link #checkRanges} for further details.
+     */
     public Item(final int number, final BigDecimal weight, final BigDecimal price) throws ItemException {
         checkRanges(number, weight, price);
         this.number = number;
@@ -49,13 +65,13 @@ public final class Item implements Serializable {
             throw new ItemException(itemNo,
                     String.format("Expected 3 components, but received %d", subItems.length));
 
-        if (!first.matcher(subItems[0]).matches())
+        if (!LABEL_PATTERN.matcher(subItems[0]).matches())
             throw new ItemException(itemNo, "Item number must be a positive integer");
 
-        if (!second.matcher(subItems[1]).matches())
+        if (!WEIGHT_PATTERN.matcher(subItems[1]).matches())
             throw new ItemException(itemNo, "Item weight must be a number");
 
-        if (!third.matcher(subItems[2]).matches())
+        if (!PRICE_PATTERN.matcher(subItems[2]).matches())
             throw new ItemException(itemNo, "Item price must be a number, preceded with €");
 
         int num = Integer.parseInt(subItems[0]);
@@ -72,14 +88,31 @@ public final class Item implements Serializable {
         this.efficiency = computeEfficiency();
     }
 
+    /**
+     * Computes efficiency = price/weight.
+     * May involving rounding up the result.
+     * Up to {@code SCALE} digits after decimal
+     * point are used.
+     *
+     * @return efficiency
+     */
     private BigDecimal computeEfficiency() {
         return price.divide(weight, SCALE, RoundingMode.HALF_UP);
     }
 
-    private static void checkRanges(final int number, final BigDecimal weight, final BigDecimal price)
+    /**
+     * @param number Item's number n. Must be 1<=n<=MAX_ITEMS_PER_LINE
+     * @param weight Item's weight w. Must be 0 < w <= MAX_ITEM_WEIGHT
+     * @param price  Item's price p. Must be 0 < p < MAX_ITEM_PRICE
+     * @throws ItemException If any of the items are out of bounds.
+     */
+    public static void checkRanges(final int number, final BigDecimal weight, final BigDecimal price)
             throws ItemException {
         if (number <= 0)
             throw new ItemException(number, "Item number must be a positive");
+        if (number > MAX_ITEMS_PER_LINE)
+            throw new ItemException(number, String.format("Item number = %d is greater than the maximum allowed %d",
+                    number, MAX_ITEMS_PER_LINE));
         if (weight.compareTo(BigDecimal.ZERO) <= 0)
             throw new ItemException(number, "Item weight must be positive");
         if (price.compareTo(BigDecimal.ZERO) <= 0)

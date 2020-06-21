@@ -28,7 +28,7 @@ class ItemTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"-1,2,3", "1,-2,3", "1,2,-3", "1,2,-3", "1,2000,3", "1,2,3000"})
+    @CsvSource({"-1,2,3", "1,-2,3", "1,2,-3", "1,2,-3", "1,2000,3", "1,2,3000", "100,100,100"})
     void checkForThrows2(final int number, final BigDecimal weight, final BigDecimal price) {
         ItemException e = assertThrows(ItemException.class, () -> new Item(number, weight, price));
         logger.trace("{}", e.getMessage());
@@ -42,7 +42,7 @@ class ItemTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"1,2.2,3.65", "100,100,100"})
+    @CsvSource({"1,2.2,3.65", "10,100,100"})
     void checkForNotThrows2(final int number, final BigDecimal weight, final BigDecimal price) {
         Item item = assertDoesNotThrow(() -> new Item(number, weight, price));
         assertEquals(
@@ -54,7 +54,7 @@ class ItemTest {
 
     @RepeatedTest(100)
     void checkForEquality() {
-        int number = r.nextInt(16) + 1;
+        int number = r.nextInt(15) + 1;
         BigDecimal weight = BigDecimal.valueOf(r.nextDouble() * 10 + 0.1);
         BigDecimal cost = BigDecimal.valueOf(r.nextDouble() * 10 + 0.1);
 

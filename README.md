@@ -93,7 +93,7 @@ Here's how we addressed questions in the previous section:
 
 The other decisions were as follows:
 
-1. **Exploit immutability:** [Effective Java (EJ)](https://learning.oreilly.com/library/view/effective-java-3rd/9780134686097/), item 17 states "minimize mutability." There are so many good reasons to use immutable classes. For this project, it helped a lot when objects where passed between methods. Had it not been for immutability, it would have been possible for one method to inadvertently modify the object.
+1. **Exploit immutability:** [Effective Java (EJ)](https://learning.oreilly.com/library/view/effective-java-3rd/9780134686097/), item 17 states "minimize mutability." There are so many good reasons to use immutable classes. For this project, it helped a lot when objects where passed between methods. Had it not been for immutability, it would have been possible for one method to inadvertently modify the object. It is a very helpful to annotate classes with [JCIP annotations](https://github.com/stephenc/jcip-annotations): For instance, immutable classes are annotated with `@Immutable`.
 
 2. **Use `final` classes:** This is a direct result of immutability, but even if a class is supposed to have subclasses, one can define it as `abstract` to prevent creation of instances. One the surface, this might seem contrary to the [open–closed principle](OCP), but it isn't. In fact, **EJ Item 18** explains how *inheritance violates encapsulation*, and that it's better to use composition over inheritance. Also, **EJ Item 19** lays down principles for designing a class for inheritance:
 
@@ -119,6 +119,8 @@ p.matcher("aaa").groupCount()
 ```
 
 However, the correct answer is 1. Had it not been for testing coverage, an edge case corresponding to the above mistake wouldn't have been tested. As a result, the issue could have propagated through the code.
+
+![](extra/0.png)
 
 6. Use `BigDecimal` to hold real numbers. `float` and `double` are notorious for handling real numbers, and they are forbidden for storing monetary values (due to rounding issues). Unfortunately, using `BigDecimal` reduced the code readability, since Java does not support operator overloading. Therefore, operations and relations are implemented via methods:
 
@@ -196,7 +198,7 @@ protected abstract SortedSet<Integer> solve(ProblemInstance problemInstance);
 ```
 Various algorithms which want to solve the problem can implement this method. The constructor of  `AbstractSolver` receives an instance of `ProblemInstance`, calls `solve`, and initializes the field `Bag bag` given the response.
 
-3. `BruteForce` is the simplest extension of `AbstractSolver`, and solves the problem by exhaustively searching the solution space. Each item can be either in the solution or not. So, for `N` items, there are `2**N` possible solution. For each solution, the cost and weight are computed, and the winner is the one with highest cost (and if several such solutions exist, the one with least weight). For `N = 15`, there are at most `32768` possible solutions. The algorithm needs only a few milliseconds (on a Surface Pro 7 laptop) to run. This class is used in unit tests to check the correctness of other algorithms on thousands of random problem instances.
+3. `BruteForce` is the simplest extension of `AbstractSolver`, and solves the problem by exhaustively searching the solution space. Each item can be either in the solution or not. So, for `N` items, there are 2<sup>N</sup> possible solution. For each solution, the cost and weight are computed, and the winner is the one with highest cost (and if several such solutions exist, the one with least weight). For `N = 15`, there are at most `32768` possible solutions. The algorithm needs only a few milliseconds (on a Surface Pro 7 laptop) to run. This class is used in unit tests to check the correctness of other algorithms on thousands of random problem instances.
 
 4. `GreedyApproximation` uses the greedy approach explained previously, with one twist: It greedily picks a subset of items until the weight constraint allows no more. It then compares the cost of this subset with the item with maximum cost, and the winner is returned. It can be shown that if this comparison is not made, the solution can be arbitrarily bad. However, the comparison allows a 1/2-approximation scheme. The unit tests show that this approximation factor is achieved over thousands of random problem instances.
 
@@ -207,3 +209,64 @@ Various algorithms which want to solve the problem can implement this method. Th
 > It would have been possible to implement memoization based on costs rather than weights.
 
 6. `BranchAndBound` is similar to `BruteForce`, but it uses heuristics so that only plausible solutions in the solution space are traversed. The order of traversal is also optimized. The solution space can be seen as a binary tree. For node `i`, the left edge denotes leaving the `i+1` item, while the right edge denotes taking it. For each node, a *bound* is computed using the heuristic explained previously, and assuming that items can be partially taken. A subtree is pruned if (1) it violates the weight constraint, (2) if its bound is less than the current maximum cost achieved by traversing other nodes of the tree.
+
+Notice that `BranchAndBound` is currently the default solver algorithm, but it can be changed in the `Main` class:
+
+```java
+List<AbstractSolver> lst = fp.parse().parallelStream()
+                .map(BranchAndBound::new)
+                .collect(Collectors.toList());
+```
+
+Also, note how `parallelStream` is used to split the task on multiple CPU cores. That is, each problem instance is run by the solver on its own CPU core.
+
+## Running
+
+You can use the provided `run.bat` file to compile and run the project. Just correct the path to `mvn` script, and you're good to go:
+
+```shell
+@echo off
+
+C:\Tools\mvn\bin\mvn -q compile exec:java -Dexec.args=%1
+```
+
+Notice that Maven script is silenced by passing `-q` to it; you can remove that to see messages of interest. To run, just give the file path to the BATCH file.
+
+Without file path:
+
+```shell
+run.bat
+```
+```text
+Please give the correct path to test cases as an argument.
+```
+
+With file path:
+
+```shell
+run.bat C:\tmp\items.txt
+```
+```text
+Line #2: Error - Line cannot be blank. This line was discarded.
+Line #4: Error - Max package weight 800 exceeds 100. This line was discarded.
+------
+4
+ERR
+-
+ERR
+2,7
+8,9
+1,2,6
+```
+
+For completeness, here's the contents of `C:\tmp\items.txt`:
+
+```text
+81:(1,53.38,€45)(2,88.62,€98)(3,78.48,€3)(4,72.30,€76)(5,30.18,€9)(6,46.34,€48)
+
+8:(1,15.3,€34)
+800:(1,15.3,€34)
+75:(1,85.31,€29)(2,14.55,€74)(3,3.98,€16)(4,26.24,€55)(5,63.69,€52)(6,76.25,€75)(7,60.02,€74)(8,93.18,€35)(9,89.95,€78)
+56:(1,90.72,€13)(2,33.80,€40)(3,43.15,€10)(4,37.97,€16)(5,46.81,€36)(6,48.77,€79)(7,81.80,€45)(8,19.36,€79)(9,6.76,€64)
+60:(1,30,€30)(2,20,€20)(3,20,€20)(4,10,€10)(5,20,€10)(6,10,€20)(7,30,€30)(8,10,€10)(9,30,€30)(10,28,€28)(11,2,€2)
+```

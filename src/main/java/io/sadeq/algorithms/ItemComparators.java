@@ -4,6 +4,12 @@ import io.sadeq.datastructures.Item;
 
 import java.util.Comparator;
 
+/**
+ * Keeps comparators used by various algorithms.
+ * For instance, {@code priceWeight} is a comparator which
+ * first compares two items using their price,
+ * and if the prices are equal compares their weight.
+ */
 public final class ItemComparators {
 
     private ItemComparators() {

@@ -166,7 +166,7 @@ Your goal is to determine which items to put in the package so that the total co
 <p>The other decisions were as follows:</p>
 <ol>
 <li>
-<p><strong>Exploit immutability:</strong> <a href="https://learning.oreilly.com/library/view/effective-java-3rd/9780134686097/" rel="nofollow">Effective Java (EJ)</a>, item 17 states "minimize mutability." There are so many good reasons to use immutable classes. For this project, it helped a lot when objects where passed between methods. Had it not been for immutability, it would have been possible for one method to inadvertently modify the object.</p>
+<p><strong>Exploit immutability:</strong> <a href="https://learning.oreilly.com/library/view/effective-java-3rd/9780134686097/" rel="nofollow">Effective Java (EJ)</a>, item 17 states "minimize mutability." There are so many good reasons to use immutable classes. For this project, it helped a lot when objects where passed between methods. Had it not been for immutability, it would have been possible for one method to inadvertently modify the object. It is a very helpful to annotate classes with <a href="https://github.com/stephenc/jcip-annotations">JCIP annotations</a>: For instance, immutable classes are annotated with <code>@Immutable</code>.</p>
 </li>
 <li>
 <p><strong>Use <code>final</code> classes:</strong> This is a direct result of immutability, but even if a class is supposed to have subclasses, one can define it as <code>abstract</code> to prevent creation of instances. One the surface, this might seem contrary to the <a href="OCP">open–closed principle</a>, but it isn't. In fact, <strong>EJ Item 18</strong> explains how <em>inheritance violates encapsulation</em>, and that it's better to use composition over inheritance. Also, <strong>EJ Item 19</strong> lays down principles for designing a class for inheritance:</p>
@@ -198,6 +198,7 @@ Your goal is to determine which items to put in the package so that the total co
 <div class="highlight highlight-source-java"><pre><span class="pl-smi">Pattern</span> p <span class="pl-k">=</span> <span class="pl-smi">Pattern</span><span class="pl-k">.</span>compile(<span class="pl-s"><span class="pl-pds">"</span>^(a)+$<span class="pl-pds">"</span></span>);
 p<span class="pl-k">.</span>matcher(<span class="pl-s"><span class="pl-pds">"</span>aaa<span class="pl-pds">"</span></span>)<span class="pl-k">.</span>groupCount()</pre></div>
 <p>However, the correct answer is 1. Had it not been for testing coverage, an edge case corresponding to the above mistake wouldn't have been tested. As a result, the issue could have propagated through the code.</p>
+<p><a href="extra/0.png" target="_blank" rel="noopener noreferrer"><img src="extra/0.png" alt="" style="max-width:100%;"></a></p>
 <ol start="6">
 <li>Use <code>BigDecimal</code> to hold real numbers. <code>float</code> and <code>double</code> are notorious for handling real numbers, and they are forbidden for storing monetary values (due to rounding issues). Unfortunately, using <code>BigDecimal</code> reduced the code readability, since Java does not support operator overloading. Therefore, operations and relations are implemented via methods:</li>
 </ol>
@@ -207,6 +208,10 @@ p<span class="pl-k">.</span>matcher(<span class="pl-s"><span class="pl-pds">"</s
 <span class="pl-c1">...</span>
 <span class="pl-k">if</span>(c<span class="pl-k">.</span>compareTo(d) <span class="pl-k">&gt;</span> <span class="pl-k">=</span> <span class="pl-c1">0</span>)
 <span class="pl-c1">...</span></pre></div>
+<ol start="7">
+<li>
+<strong>Use a linter:</strong> Linters helps in following best practices, as well as a unified convention. I used <a href="https://www.sonarlint.org/intellij/" rel="nofollow">SonarLint plugin for IntelliJ IDEA</a>. Among other things, it computed the <a href="https://www.sonarsource.com/resources/white-papers/cognitive-complexity.html" rel="nofollow">Cognitive Complexity™</a> of the code. In a few cases where the method complexity was beyond the allowable 15, it warned me and I simplidied the code. The result was much better!</li>
+</ol>
 <h2>
 <a id="user-content-design" class="anchor" href="#design" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Design</h2>
 <h3>
@@ -279,7 +284,7 @@ p<span class="pl-k">.</span>matcher(<span class="pl-s"><span class="pl-pds">"</s
 <p>Various algorithms which want to solve the problem can implement this method. The constructor of  <code>AbstractSolver</code> receives an instance of <code>ProblemInstance</code>, calls <code>solve</code>, and initializes the field <code>Bag bag</code> given the response.</p>
 <ol start="3">
 <li>
-<p><code>BruteForce</code> is the simplest extension of <code>AbstractSolver</code>, and solves the problem by exhaustively searching the solution space. Each item can be either in the solution or not. So, for <code>N</code> items, there are <code>2**N</code> possible solution. For each solution, the cost and weight are computed, and the winner is the one with highest cost (and if several such solutions exist, the one with least weight). For <code>N = 15</code>, there are at most <code>32768</code> possible solutions. The algorithm needs only a few milliseconds (on a Surface Pro 7 laptop) to run. This class is used in unit tests to check the correctness of other algorithms on thousands of random problem instances.</p>
+<p><code>BruteForce</code> is the simplest extension of <code>AbstractSolver</code>, and solves the problem by exhaustively searching the solution space. Each item can be either in the solution or not. So, for <code>N</code> items, there are 2<sup>N</sup> possible solution. For each solution, the cost and weight are computed, and the winner is the one with highest cost (and if several such solutions exist, the one with least weight). For <code>N = 15</code>, there are at most <code>32768</code> possible solutions. The algorithm needs only a few milliseconds (on a Surface Pro 7 laptop) to run. This class is used in unit tests to check the correctness of other algorithms on thousands of random problem instances.</p>
 </li>
 <li>
 <p><code>GreedyApproximation</code> uses the greedy approach explained previously, with one twist: It greedily picks a subset of items until the weight constraint allows no more. It then compares the cost of this subset with the item with maximum cost, and the winner is returned. It can be shown that if this comparison is not made, the solution can be arbitrarily bad. However, the comparison allows a 1/2-approximation scheme. The unit tests show that this approximation factor is achieved over thousands of random problem instances.</p>
@@ -299,6 +304,44 @@ p<span class="pl-k">.</span>matcher(<span class="pl-s"><span class="pl-pds">"</s
 <li>
 <code>BranchAndBound</code> is similar to <code>BruteForce</code>, but it uses heuristics so that only plausible solutions in the solution space are traversed. The order of traversal is also optimized. The solution space can be seen as a binary tree. For node <code>i</code>, the left edge denotes leaving the <code>i+1</code> item, while the right edge denotes taking it. For each node, a <em>bound</em> is computed using the heuristic explained previously, and assuming that items can be partially taken. A subtree is pruned if (1) it violates the weight constraint, (2) if its bound is less than the current maximum cost achieved by traversing other nodes of the tree.</li>
 </ol>
+<p>Notice that <code>BranchAndBound</code> is currently the default solver algorithm, but it can be changed in the <code>Main</code> class:</p>
+<div class="highlight highlight-source-java"><pre><span class="pl-k">List&lt;<span class="pl-smi">AbstractSolver</span>&gt;</span> lst <span class="pl-k">=</span> fp<span class="pl-k">.</span>parse()<span class="pl-k">.</span>parallelStream()
+                .map(<span class="pl-smi">BranchAndBound</span><span class="pl-k">::</span><span class="pl-k">new</span>)
+                .collect(<span class="pl-smi">Collectors</span><span class="pl-k">.</span>toList());</pre></div>
+<p>Also, note how <code>parallelStream</code> is used to split the task on multiple CPU cores. That is, each problem instance is run by the solver on its own CPU core.</p>
+<h2>
+<a id="user-content-running" class="anchor" href="#running" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Running</h2>
+<p>You can use the provided <code>run.bat</code> file to compile and run the project. Just correct the path to <code>mvn</code> script, and you're good to go:</p>
+<div class="highlight highlight-source-shell"><pre>@echo off
+
+C:<span class="pl-cce">\T</span>ools<span class="pl-cce">\m</span>vn<span class="pl-cce">\b</span>in<span class="pl-cce">\m</span>vn -q compile exec:java -Dexec.args=%1</pre></div>
+<p>Notice that Maven script is silenced by passing <code>-q</code> to it; you can remove that to see messages of interest. To run, just give the file path to the BATCH file.</p>
+<p>Without file path:</p>
+<div class="highlight highlight-source-shell"><pre>run.bat</pre></div>
+<pre lang="text"><code>Please give the correct path to test cases as an argument.
+</code></pre>
+<p>With file path:</p>
+<div class="highlight highlight-source-shell"><pre>run.bat C:<span class="pl-cce">\t</span>mp<span class="pl-cce">\i</span>tems.txt</pre></div>
+<pre lang="text"><code>Line #2: Error - Line cannot be blank. This line was discarded.
+Line #4: Error - Max package weight 800 exceeds 100. This line was discarded.
+------
+4
+ERR
+-
+ERR
+2,7
+8,9
+1,2,6
+</code></pre>
+<p>For completeness, here's the contents of <code>C:\tmp\items.txt</code>:</p>
+<pre lang="text"><code>81:(1,53.38,€45)(2,88.62,€98)(3,78.48,€3)(4,72.30,€76)(5,30.18,€9)(6,46.34,€48)
+
+8:(1,15.3,€34)
+800:(1,15.3,€34)
+75:(1,85.31,€29)(2,14.55,€74)(3,3.98,€16)(4,26.24,€55)(5,63.69,€52)(6,76.25,€75)(7,60.02,€74)(8,93.18,€35)(9,89.95,€78)
+56:(1,90.72,€13)(2,33.80,€40)(3,43.15,€10)(4,37.97,€16)(5,46.81,€36)(6,48.77,€79)(7,81.80,€45)(8,19.36,€79)(9,6.76,€64)
+60:(1,30,€30)(2,20,€20)(3,20,€20)(4,10,€10)(5,20,€10)(6,10,€20)(7,30,€30)(8,10,€10)(9,30,€30)(10,28,€28)(11,2,€2)
+</code></pre>
 
               </article>
             </div>

@@ -9,19 +9,23 @@ import java.util.SortedSet;
 /**
  * The {@code Solver} class provides a base class for various
  * algorithms implementing the solution to the given problem.
- * Its methods have default accessibility rather than being
- * {@code protected}, in accordance with:
- * <p>
- * Effective Java: Item 13, Minimize the accessibility of
- * classes and members
+ * It has an {@code abstract} method called {@code solve}.
+ * Various algorithms which want to solve the problem can
+ * implement this method.
  */
-
 @Getter
 public abstract class AbstractSolver {
     private final Bag bag;
 
+    /**
+     * The constructor receives an instance of ProblemInstance,
+     * calls solve on it, and initializes the field {@code bag}
+     * upon receiving the response.
+     *
+     * @param problemInstance An instance of the problem
+     */
     AbstractSolver(final ProblemInstance problemInstance) {
-        if(problemInstance == null) {
+        if (problemInstance == null) {
             bag = null;
             return;
         }
@@ -34,5 +38,11 @@ public abstract class AbstractSolver {
         return (bag == null) ? "ERR" : bag.getResult();
     }
 
-    protected abstract SortedSet<Integer> solve(ProblemInstance problemInstance);
+    /**
+     * Solves the package problem for the given instance.
+     *
+     * @param problemInstance An instance of the problem
+     * @return A sorted set containing the indices of items in the solution
+     */
+    protected abstract SortedSet<Integer> solve(final ProblemInstance problemInstance);
 }

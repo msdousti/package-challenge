@@ -14,11 +14,16 @@ import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 /**
- * @see <a href="http://ac.informatik.uni-freiburg.de/lak_teaching/ws11_12/combopt/notes/knapsack.pdf">
- * "Chapter 4. Knapsack" by Alexander Souza
- * </a>
+ * This class uses the greedy approach explained previously,
+ * with one twist: It greedily picks a subset of items until
+ * the weight constraint allows no more. It then compares the
+ * cost of this subset with the item with maximum cost, and
+ * the winner is returned. It can be shown that if this
+ * comparison is not made, the solution can be arbitrarily bad.
+ * However, the comparison allows a 1/2-approximation scheme.
+ * The unit tests show that this approximation factor is
+ * achieved over thousands of random problem instances.
  */
-
 @Immutable
 public final class GreedyApproximation extends AbstractSolver {
     private static final Logger logger = LoggerFactory.getLogger(GreedyApproximation.class);
@@ -27,7 +32,15 @@ public final class GreedyApproximation extends AbstractSolver {
         super(problemInstance);
     }
 
+    /**
+     * @inheritDoc
+     */
     protected SortedSet<Integer> solve(final ProblemInstance problemInstance) {
+        /*
+         * Sort items in decreasing order of efficiency.
+         * If two items have the same efficiency, prefer the
+         * one with higher price.
+         */
         final List<Item> sorted = problemInstance.getItems().stream()
                 .sorted(ItemComparators.efficiencyPrice.reversed())
                 .collect(Collectors.toUnmodifiableList());
@@ -41,6 +54,11 @@ public final class GreedyApproximation extends AbstractSolver {
         BigDecimal maxPrice = BigDecimal.ZERO;
         int maxLabel = -1;
 
+        /*
+         * Iterate over the sorted items, and pick them if
+         * the resulting subset does not violate the
+         * maximum weight constraint.
+         */
         for (Item item : sorted) {
             BigDecimal tmpWeight = weight.add(item.getWeight());
             if (tmpWeight.compareTo(problemInstance.getMaxWeight()) <= 0) {
@@ -48,6 +66,7 @@ public final class GreedyApproximation extends AbstractSolver {
                 indices.add(item.getNumber());
                 price = price.add(item.getPrice());
             }
+            // keep an eye on the item with maximum price
             if (maxPrice.compareTo(item.getPrice()) < 0) {
                 maxLabel = item.getNumber();
                 maxPrice = item.getPrice();
@@ -59,6 +78,13 @@ public final class GreedyApproximation extends AbstractSolver {
         logger.trace("Price = {}.", price);
         logger.trace("Solution = {}.", indices);
 
+        /*
+         * If the resulting subset of items from the heuristic
+         * has lower price than the max-price item, just return
+         * the latter.
+         *
+         * This check ensures 1/2 approximation factor.
+         */
         if (maxPrice.compareTo(price) > 0)
             return new TreeSet<>(Collections.singleton(maxLabel));
 

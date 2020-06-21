@@ -20,18 +20,29 @@ import java.util.TreeSet;
 @Getter
 public final class Bag {
     /*
-     * Immutability is guaranteed by initialization,
+     * Immutability for `indices` is guaranteed by initialization,
      * which is in one of these forms:
      *     1) Collections.emptyList()
      *     2) Collections.unmodifiableList(some-other-list)
      */
+
+    // A sorted set of indices in the bag
     private final SortedSet<Integer> indices;
+
+    // CSV format of elements in indices
     private final String result;
+
+    // Total weight of the bag
     private final BigDecimal resultWeight;
+
+    // Total price of the bag
     private final BigDecimal resultPrice;
 
     /**
      * Constructs a {@code Bag} using items whose labels are specified.
+     * Specifically, converts {@code sortedLabels} to CSV format and stores it
+     * in {@code result}, and fetches items from {@code map} based on their labels
+     * to compute their total price and weight.
      *
      * @param map    Map of labels-to-items
      * @param sortedLabels Label of items to include in the bag, sorted
