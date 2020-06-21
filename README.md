@@ -3,10 +3,10 @@
 I received the following challenge as part of a software engineering task, and I decided to document some details about it. The details include:
 
 0) Challenge description
-1) Requirement analysis
-2) Design decisions
+1) Requirements analysis
+2) Design principles and decisions
 3) Design
-4) Implementation
+4) Running the code
 
 Each item is described next.
 
@@ -54,7 +54,7 @@ The sample output for the sample input file above should look like this:
 8,9
 ```
 
-## Requirement analysis
+## Requirements analysis
 First, we note that the problem belongs to a family of famous problems called [knapsack problems](https://en.wikipedia.org/wiki/Knapsack_problem). There are actually [several variants](https://en.wikipedia.org/wiki/List_of_knapsack_problems) of this problem. This one has the following characterizations:
 
 1. **It's a 0-1 knapsack:** Each item is either taken or left.
@@ -220,7 +220,7 @@ List<AbstractSolver> lst = fp.parse().parallelStream()
 
 Also, note how `parallelStream` is used to split the task on multiple CPU cores. That is, each problem instance is run by the solver on its own CPU core.
 
-## Running
+## Running the code
 
 You can use the provided `run.bat` file to compile and run the project. Just correct the path to `mvn` script, and you're good to go:
 
