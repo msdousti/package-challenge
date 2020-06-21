@@ -120,5 +120,90 @@ p.matcher("aaa").groupCount()
 
 However, the correct answer is 1. Had it not been for testing coverage, an edge case corresponding to the above mistake wouldn't have been tested. As a result, the issue could have propagated through the code.
 
+6. Use `BigDecimal` to hold real numbers. `float` and `double` are notorious for handling real numbers, and they are forbidden for storing monetary values (due to rounding issues). Unfortunately, using `BigDecimal` reduced the code readability, since Java does not support operator overloading. Therefore, operations and relations are implemented via methods:
+
+```java
+BigDecimal a = new BigDecimal("12.345");
+BigDecimal b = new BigDecimal("6.78");
+BigDecimal c = a.subtract(BigDecimal.TEN).multiply(b);
+...
+if(c.compareTo(d) > = 0)
+...
+```
+
+7. **Use a linter:** Linters helps in following best practices, as well as a unified convention. I used [SonarLint plugin for IntelliJ IDEA](https://www.sonarlint.org/intellij/). Among other things, it computed the [Cognitive Complexity™](https://www.sonarsource.com/resources/white-papers/cognitive-complexity.html) of the code. In a few cases where the method complexity was beyond the allowable 15, it warned me and I simplidied the code. The result was much better!
+
 ## Design
-## Implementation
+
+### Packages
+
+The project uses the following packages. They reside in the top-level package `io.sadeq`:
+
+1. `exceptions`: Contains custom exception classes.
+2. `utils`: Contains utility classes.
+3. `datastructures`: Contains data structures.
+4. `algorithms`: Contains algorithms.
+
+### Classes
+The simplest class is the `Configs` class, which resides in the top-level package. It contains configurations such as the default file charset. Each configuration is documented within the class.
+
+![](extra/1.png)
+
+The top-level package also includes the `Main` class, which contains the program entry point.
+
+The classed within the `exceptions` package are depicted below:
+
+![](extra/2.png)
+
+1. `HugeProblemException` is thrown if the problem instance is greater than some value specified in the `Configs` class.
+2. `FormatException` is a super class for various exceptions thrown while parsing the input file.
+3. `FileFormatException` is thrown when the input file is empty or is larger than some value specified in the `Configs` class.
+4. `LineFormatException` is thrown when a line of the input file is malformed. For instance, it is not in the format `a:b`.
+4. `ItemFormatException` is thrown when an item on a specific line is malformed. For instance, it is not in the format `a,b,c`.
+
+The classed within the `utils` package are depicted below:
+
+![](extra/3.png)
+
+1. `RegexPatterns` contains the regular expression patterns used by other classes. The patterns are static members of the class, and are compiled for increased efficiency.
+2. `FileParser` loads the input file, and reads it line-by-line. Each line is passed to an instance of the class `ProblemInstance` (explained next) for processing.
+
+The classed within the `datastructures` package are depicted below:
+
+![](extra/4.png)
+
+1. `ProblemInstance` reads an input line as a `String`, and parses it into a maximum weight (`BigDecimal maxWeight`) and a list of items (`List<Item> items`). The class `Item` is explained next. It also keeps a mapping `Map<Integer, Item> map` for fast retrieval of items given their label.
+
+2. `Item` parses triples `a,b,c`, and stores them as the triple `int number, BigDecimal weight, BigDecimal price`.
+
+3. `Bag` represents a subset of items. It receives the indices (or labels) of items, and computes basic information such as the total cost and the total weight of the items in the subset.
+
+The classed within the `algorithms` package are depicted below:
+
+![](extra/5.png)
+
+1. `ItemComparators`: Keeps comparators used by various algorithms. For instance, `priceWeight` is a comparator which first compares two items using their price, and if the prices are equal compares their weight. Java provides an excellent API for writing such comparators:
+
+```java
+// If their price is equal, the lighter one wins
+public static final Comparator<Item> priceWeight =
+        Comparator.comparing(Item::getPrice).thenComparing(Item::getWeight, Comparator.reverseOrder());
+```
+
+2. `AbstractSolver` is the main class marked for inheritance. It has the following `abstract` method:
+```java
+protected abstract SortedSet<Integer> solve(ProblemInstance problemInstance);
+```
+Various algorithms which want to solve the problem can implement this method. The constructor of  `AbstractSolver` receives an instance of `ProblemInstance`, calls `solve`, and initializes the field `Bag bag` given the response.
+
+3. `BruteForce` is the simplest extension of `AbstractSolver`, and solves the problem by exhaustively searching the solution space. Each item can be either in the solution or not. So, for `N` items, there are `2**N` possible solution. For each solution, the cost and weight are computed, and the winner is the one with highest cost (and if several such solutions exist, the one with least weight). For `N = 15`, there are at most `32768` possible solutions. The algorithm needs only a few milliseconds (on a Surface Pro 7 laptop) to run. This class is used in unit tests to check the correctness of other algorithms on thousands of random problem instances.
+
+4. `GreedyApproximation` uses the greedy approach explained previously, with one twist: It greedily picks a subset of items until the weight constraint allows no more. It then compares the cost of this subset with the item with maximum cost, and the winner is returned. It can be shown that if this comparison is not made, the solution can be arbitrarily bad. However, the comparison allows a 1/2-approximation scheme. The unit tests show that this approximation factor is achieved over thousands of random problem instances.
+
+> While `GreedyApproximation` does not provide an exact solution, it performs very well on most instances. Even for those instances where the answer is suboptimal, the weight of the subset is often substantially lower. Furthermore, the algorithm only needs to sort items once, and then iterate over them (a total cost of `O(N log N)`), which is much better than other algorithms (for general cases, the worst case is conjectured to be exponential in `N`). At some point, the client may decide that the approximation is good enough, and is worth switching to in favor of faster running time.
+
+5. `DynamicProgramming` is a pseudo-polynomial algorithm: It is polynomial time in the value `W`, which denotes the number of possible weights (if the weights are fractional, we can multiply them by a common factor so that they are all integers.) It works by trading space for time: A large table is used to memoize state for subproblems. For this specific problem, the parameters are such that the running time of `DynamicProgramming` is worse than that of `BruteForce`, and it even uses much more RAM.
+
+> It would have been possible to implement memoization based on costs rather than weights.
+
+6. `BranchAndBound` is similar to `BruteForce`, but it uses heuristics so that only plausible solutions in the solution space are traversed. The order of traversal is also optimized. The solution space can be seen as a binary tree. For node `i`, the left edge denotes leaving the `i+1` item, while the right edge denotes taking it. For each node, a *bound* is computed using the heuristic explained previously, and assuming that items can be partially taken. A subtree is pruned if (1) it violates the weight constraint, (2) if its bound is less than the current maximum cost achieved by traversing other nodes of the tree.
